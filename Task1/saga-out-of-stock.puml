@@ -1,0 +1,46 @@
+@startuml saga-out-of-stock
+title Оформление заказа: товара не хватает на складе
+
+autonumber
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 220
+
+actor "Покупатель" as customer
+participant "Мобильное\nприложение" as app
+participant "Order\nService" as order
+queue "Kafka" as kafka
+participant "Inventory\nService" as inventory
+participant "Payment\nService" as payment
+participant "Notification\nService" as notification
+
+customer -> app : подтверждает заказ
+app -> order : POST /orders
+order -> order : заказ CREATED, OrderCreated в outbox
+order --> app : 202 Accepted, orderId
+order -> kafka : OrderCreated
+
+kafka -> inventory : OrderCreated
+inventory -> inventory : остатков не хватает, резерв не создаётся
+note right of inventory
+  резервируются сразу все позиции
+  в одной транзакции, поэтому
+  частичного резерва не бывает
+end note
+inventory -> kafka : StockReservationFailed (каких товаров не хватило)
+
+kafka -> order : StockReservationFailed
+order -> order : CANCELLED, причина OUT_OF_STOCK
+order -> kafka : OrderCancelled
+
+kafka -> notification : OrderCancelled
+notification -> customer : push: товар закончился, заказ отменён
+
+kafka -> inventory : OrderCancelled
+inventory -> inventory : резерва нет, ничего не делает
+kafka -> payment : OrderCancelled
+payment -> payment : платежа нет, ничего не делает
+
+app -> order : GET /orders/{id}
+order --> app : «Отменён», список закончившихся товаров
+@enduml

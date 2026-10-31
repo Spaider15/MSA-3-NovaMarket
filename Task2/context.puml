@@ -1,0 +1,30 @@
+@startuml context
+!include <C4/C4_Context>
+
+HIDE_STEREOTYPE()
+skinparam linetype polyline
+
+title NovaMarket — диаграмма контекста (C1)
+
+Person(customer, "Покупатель", "Выбирает и заказывает товары, следит за заказами, смотрит историю покупок")
+Person(seller, "Продавец", "Размещает товары и обрабатывает заказы")
+
+System(nova, "NovaMarket", "Маркетплейс: каталог, корзина, оформление и оплата заказов, доставка, история покупок")
+
+System_Ext(psp, "Платёжный шлюз", "Оплата картой, привязка карт, автоплатежи, возвраты")
+System_Ext(ofd, "Онлайн-касса / ОФД", "Фискализация чеков")
+System_Ext(logistics, "Логистический провайдер", "Доставка заказов")
+System_Ext(messaging, "Push / SMS / e-mail", "FCM, APNs, SMS-шлюз, почтовый сервис")
+
+Rel_D(customer, nova, "Заказывает товары, смотрит статусы и историю заказов", "мобильное приложение")
+Rel_D(seller, nova, "Обрабатывает заказы", "кабинет продавца")
+
+Rel_D(nova, psp, "Платежи, возвраты")
+Rel_U(psp, nova, "Результат оплаты", "вебхук")
+Rel_D(nova, ofd, "Чеки на оплату и возврат")
+Rel_D(nova, logistics, "Заявки на доставку")
+Rel_U(logistics, nova, "Статусы доставки", "вебхук")
+Rel_D(nova, messaging, "Уведомления")
+Rel_U(messaging, customer, "Push, SMS")
+Rel_U(messaging, seller, "E-mail, push")
+@enduml

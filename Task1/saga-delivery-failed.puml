@@ -1,0 +1,57 @@
+@startuml saga-delivery-failed
+title Оформление заказа: не удалось создать заявку на доставку
+
+autonumber
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 220
+
+actor "Покупатель" as customer
+participant "Order\nService" as order
+queue "Kafka" as kafka
+participant "Inventory\nService" as inventory
+participant "Payment\nService" as payment
+participant "Платёжный\nшлюз" as psp
+participant "Delivery\nService" as delivery
+participant "Логистический\nпровайдер" as logistics
+participant "Notification\nService" as notification
+
+== Шаги 1–3 как в успешном сценарии: товары зарезервированы, заказ оплачен ==
+order -> kafka : OrderPaid
+kafka -> inventory : OrderPaid
+inventory -> inventory : резерв подтверждён
+kafka -> delivery : OrderPaid
+
+alt провайдер недоступен
+    loop повторы с экспоненциальной задержкой, в том числе через другую службу доставки
+        delivery -> logistics : заявка на доставку (через Egress Proxy)
+        logistics --> delivery : таймаут, 5xx или fallback-ответ circuit breaker
+    end
+    delivery -> delivery : лимит попыток исчерпан
+else провайдер отказал
+    delivery -> logistics : заявка на доставку
+    logistics --> delivery : отказ, например адрес не обслуживается
+end
+
+delivery -> kafka : ShipmentCreationFailed (причина)
+kafka -> order : ShipmentCreationFailed
+order -> order : CANCELLED, причина DELIVERY_FAILED
+order -> kafka : OrderCancelled
+
+kafka -> payment : OrderCancelled
+payment -> psp : возврат средств
+psp --> payment : возврат выполнен
+payment -> kafka : RefundSucceeded
+
+kafka -> inventory : OrderCancelled
+inventory -> inventory : снимает резерв
+inventory -> kafka : StockReleased
+
+kafka -> order : RefundSucceeded, StockReleased
+order -> order : отмечает возврат денег и снятие резерва
+
+kafka -> notification : OrderCancelled
+notification -> customer : push: доставку организовать не удалось, заказ отменён
+kafka -> notification : RefundSucceeded
+notification -> customer : push: деньги возвращены
+@enduml
