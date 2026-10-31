@@ -1,0 +1,131 @@
+@startuml containers
+!include <C4/C4_Container>
+
+HIDE_STEREOTYPE()
+skinparam ranksep 130
+skinparam nodesep 45
+skinparam linetype polyline
+skinparam legendBackgroundColor #FFFFFF
+skinparam legendBorderColor #999999
+skinparam legendFontColor #333333
+
+AddRelTag("event", $lineStyle = DashedLine(), $textColor = "#555555", $lineColor = "#7a7a7a")
+
+title NovaMarket — контейнерная диаграмма (C2)
+
+Person(customer, "Покупатель")
+Person(seller, "Продавец")
+
+System_Boundary(nova, "NovaMarket") {
+    Container(mobile, "Мобильное приложение", "iOS, Android", "Каталог, корзина, оформление и отслеживание заказов")
+    Container(seller_web, "Кабинет продавца", "Web SPA", "Заказы продавца и их статусы, товары, остатки")
+    Container(gateway, "API Gateway", "NGINX", "Маршрутизация, проверка JWT, rate limiting, приём вебхуков")
+
+    Container(review, "Review Service", "Java, Spring Boot", "Отзывы и рейтинг товаров")
+    Container(cart, "Cart Service", "Java, Spring Boot", "Корзина покупателя")
+    Container(catalog, "Catalog Service", "Java, Spring Boot", "Товары, цены, фото, категории. Поиск и фильтры по категории, цене, рейтингу, наличию")
+    Container(order, "Order Service", "Java, Spring Boot", "Оформление заказа, статусы заказа, заказы продавца")
+    Container(inventory, "Inventory Service", "Java, Spring Boot", "Остатки на складах продавцов, резервирование")
+    Container(payment, "Payment Service", "Java, Spring Boot", "Платежи, привязанные карты, автосписания, возвраты")
+    Container(delivery, "Delivery Service", "Java, Spring Boot", "Заявки на доставку, трек-номер, ожидаемая дата, статусы доставки")
+    Container(notification, "Notification Service", "Java, Spring Boot", "Push, SMS и e-mail покупателям и продавцам")
+
+    ContainerDb(review_db, "Review DB", "PostgreSQL")
+    ContainerDb(cart_db, "Cart DB", "Redis")
+    ContainerDb(catalog_db, "Catalog DB", "PostgreSQL, OpenSearch", "Карточки товаров, поисковый индекс")
+    ContainerDb(order_db, "Order DB", "PostgreSQL", "Заказы, outbox")
+    ContainerDb(inventory_db, "Inventory DB", "PostgreSQL", "Остатки, резервы, outbox")
+    ContainerDb(payment_db, "Payment DB", "PostgreSQL", "Платежи, токены карт, outbox")
+    ContainerDb(delivery_db, "Delivery DB", "PostgreSQL", "Отправления, outbox")
+    ContainerDb(notification_db, "Notification DB", "PostgreSQL", "Токены устройств, история")
+
+    Boundary(kafka, "Apache Kafka") {
+        ContainerQueue(t_reviews, "reviews", "topic", "ProductRatingChanged")
+        ContainerQueue(t_orders, "orders", "topic", "OrderCreated, OrderPaid, OrderCancelled")
+        ContainerQueue(t_inventory, "inventory", "topic", "StockReserved, StockReservationFailed, StockReleased, StockChanged")
+        ContainerQueue(t_payments, "payments", "topic", "PaymentInitiated, PaymentSucceeded, PaymentFailed, RefundSucceeded")
+        ContainerQueue(t_shipments, "shipments", "topic", "ShipmentCreated, ShipmentCreationFailed, ShipmentHandedOver, ShipmentDelivered")
+    }
+
+    Container(egress, "Egress Proxy", "NGINX", "Вызовы внешних сервисов: таймауты, circuit breaker")
+}
+
+System_Ext(psp, "Платёжный шлюз", "Оплата картой, привязка карт, автоплатежи, возвраты")
+System_Ext(logistics, "Логистический провайдер", "Приём заявок, трек-номера, статусы доставки")
+System_Ext(messaging, "Push / SMS / e-mail", "FCM, APNs, SMS-шлюз, почтовый сервис")
+
+Lay_R(customer, seller)
+Lay_R(mobile, seller_web)
+Lay_R(review, cart)
+Lay_R(cart, catalog)
+Lay_R(catalog, order)
+Lay_R(order, inventory)
+Lay_R(inventory, payment)
+Lay_R(payment, delivery)
+Lay_R(delivery, notification)
+Lay_R(t_reviews, t_orders)
+Lay_R(t_orders, t_inventory)
+Lay_R(t_inventory, t_payments)
+Lay_R(t_payments, t_shipments)
+
+Rel_D(customer, mobile, "Выбирает товары, оформляет и отслеживает заказы")
+Rel_D(seller, seller_web, "Смотрит и обрабатывает заказы")
+Rel_D(mobile, gateway, "REST", "HTTPS")
+Rel_D(seller_web, gateway, "REST", "HTTPS")
+
+Rel_D(gateway, review, "Отзывы", "REST")
+Rel_D(gateway, cart, "Корзина", "REST")
+Rel_D(gateway, catalog, "Каталог, карточка товара", "REST")
+Rel_D(gateway, order, "Оформление, статус и детали заказа", "REST")
+Rel_D(gateway, inventory, "Остатки продавца", "REST")
+Rel_D(gateway, payment, "Привязанные карты, вебхуки оплаты", "REST")
+Rel_D(gateway, delivery, "Способы доставки, ПВЗ, вебхуки статусов", "REST")
+
+Rel_R(cart, catalog, "Цены и наличие", "REST")
+Rel_L(order, catalog, "Сверка цен", "REST")
+
+Rel_U(review, review_db, "")
+Rel_U(cart, cart_db, "")
+Rel_U(catalog, catalog_db, "")
+Rel_U(order, order_db, "")
+Rel_U(inventory, inventory_db, "")
+Rel_U(payment, payment_db, "")
+Rel_U(delivery, delivery_db, "")
+Rel_U(notification, notification_db, "")
+
+Rel_D(review, t_reviews, "", $tags = "event")
+Rel_U(t_reviews, catalog, "ProductRatingChanged", $tags = "event")
+
+Rel_D(order, t_orders, "", $tags = "event")
+Rel_U(t_orders, cart, "OrderCreated", $tags = "event")
+Rel_U(t_orders, inventory, "OrderCreated, OrderPaid, OrderCancelled", $tags = "event")
+Rel_U(t_orders, payment, "OrderCancelled", $tags = "event")
+Rel_U(t_orders, delivery, "OrderPaid", $tags = "event")
+Rel_U(t_orders, notification, "OrderPaid, OrderCancelled", $tags = "event")
+
+Rel_D(inventory, t_inventory, "", $tags = "event")
+Rel_U(t_inventory, catalog, "StockChanged", $tags = "event")
+Rel_U(t_inventory, order, "StockReservationFailed, StockReleased", $tags = "event")
+Rel_U(t_inventory, payment, "StockReserved", $tags = "event")
+
+Rel_D(payment, t_payments, "", $tags = "event")
+Rel_U(t_payments, order, "PaymentInitiated, PaymentSucceeded, PaymentFailed, RefundSucceeded", $tags = "event")
+Rel_U(t_payments, notification, "RefundSucceeded", $tags = "event")
+
+Rel_D(delivery, t_shipments, "", $tags = "event")
+Rel_U(t_shipments, order, "ShipmentCreated, ShipmentCreationFailed, ShipmentHandedOver, ShipmentDelivered", $tags = "event")
+Rel_U(t_shipments, notification, "ShipmentCreated, ShipmentHandedOver, ShipmentDelivered", $tags = "event")
+
+Rel_D(payment, egress, "Платёж, списание по токену, возврат", "HTTPS")
+Rel_D(delivery, egress, "Заявка на доставку, статус", "HTTPS")
+Rel_D(egress, psp, "", "HTTPS")
+Rel_D(egress, logistics, "", "HTTPS")
+Rel_D(notification, messaging, "Push покупателям, e-mail и push продавцам", "HTTPS")
+Rel_U(psp, gateway, "Вебхук с результатом оплаты", "HTTPS")
+Rel_U(logistics, gateway, "Вебхук со статусом доставки", "HTTPS")
+
+legend right
+  Сплошная линия — синхронный вызов
+  Пунктир — событие через Kafka
+endlegend
+@enduml

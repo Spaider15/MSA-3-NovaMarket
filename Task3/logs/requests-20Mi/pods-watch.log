@@ -1,0 +1,35 @@
+12:48:30  NAME                            READY   STATUS    RESTARTS   AGE
+12:48:30  scaletestapp-7c95b9f6fd-fbpt8   1/1     Running   0          11s
+12:52:50  scaletestapp-7c95b9f6fd-bcg8k   0/1     Pending   0          0s
+12:52:51  scaletestapp-7c95b9f6fd-bcg8k   0/1     Pending   0          0s
+12:52:51  scaletestapp-7c95b9f6fd-bcg8k   0/1     ContainerCreating   0          0s
+12:52:51  scaletestapp-7c95b9f6fd-bcg8k   0/1     ContainerCreating   0          0s
+12:52:51  scaletestapp-7c95b9f6fd-bcg8k   1/1     Running             0          0s
+12:54:02  scaletestapp-7c95b9f6fd-fbpt8   0/1     OOMKilled           0          5m42s
+12:54:02  scaletestapp-7c95b9f6fd-fbpt8   1/1     Running             1 (1s ago)   5m42s
+12:54:46  scaletestapp-7c95b9f6fd-bcg8k   0/1     OOMKilled           0            115s
+12:54:46  scaletestapp-7c95b9f6fd-bcg8k   1/1     Running             1 (0s ago)   115s
+12:55:07  scaletestapp-7c95b9f6fd-fbpt8   0/1     OOMKilled           1 (66s ago)   6m47s
+12:55:13  scaletestapp-7c95b9f6fd-bcg8k   0/1     OOMKilled           1 (27s ago)   2m22s
+12:55:17  scaletestapp-7c95b9f6fd-fbpt8   0/1     CrashLoopBackOff    1 (11s ago)   6m57s
+12:55:17  scaletestapp-7c95b9f6fd-fbpt8   1/1     Running             2 (11s ago)   6m57s
+12:55:21  scaletestapp-7c95b9f6fd-fbpt8   0/1     OOMKilled           2 (15s ago)   7m1s
+12:55:28  scaletestapp-7c95b9f6fd-bcg8k   0/1     CrashLoopBackOff    1 (15s ago)   2m37s
+12:55:28  scaletestapp-7c95b9f6fd-bcg8k   1/1     Running             2 (15s ago)   2m37s
+12:55:31  scaletestapp-7c95b9f6fd-bcg8k   0/1     OOMKilled           2 (18s ago)   2m40s
+12:55:46  scaletestapp-7c95b9f6fd-fbpt8   0/1     CrashLoopBackOff    2 (25s ago)   7m26s
+12:55:46  scaletestapp-7c95b9f6fd-fbpt8   1/1     Running             3 (25s ago)   7m26s
+12:55:54  scaletestapp-7c95b9f6fd-fbpt8   0/1     OOMKilled           3 (33s ago)   7m34s
+12:55:58  scaletestapp-7c95b9f6fd-bcg8k   0/1     CrashLoopBackOff    2 (27s ago)   3m7s
+12:55:58  scaletestapp-7c95b9f6fd-bcg8k   1/1     Running             3 (27s ago)   3m7s
+12:56:01  scaletestapp-7c95b9f6fd-bcg8k   0/1     OOMKilled           3 (30s ago)   3m10s
+12:56:34  scaletestapp-7c95b9f6fd-fbpt8   0/1     CrashLoopBackOff    3 (40s ago)   8m14s
+12:56:34  scaletestapp-7c95b9f6fd-fbpt8   1/1     Running             4 (40s ago)   8m14s
+12:56:41  scaletestapp-7c95b9f6fd-fbpt8   0/1     OOMKilled           4 (47s ago)   8m21s
+12:56:50  scaletestapp-7c95b9f6fd-bcg8k   0/1     CrashLoopBackOff    3 (50s ago)   3m59s
+12:56:50  scaletestapp-7c95b9f6fd-bcg8k   1/1     Running             4 (50s ago)   3m59s
+12:56:54  scaletestapp-7c95b9f6fd-bcg8k   0/1     OOMKilled           4 (54s ago)   4m3s
+12:57:25  scaletestapp-7c95b9f6fd-bcg8k   0/1     Terminating         4 (85s ago)   4m34s
+12:57:25  scaletestapp-7c95b9f6fd-fbpt8   0/1     Terminating         4 (91s ago)   9m5s
+12:57:25  scaletestapp-7c95b9f6fd-bcg8k   0/1     Terminating         4 (85s ago)   4m34s
+12:57:25  scaletestapp-7c95b9f6fd-fbpt8   0/1     Terminating         4 (91s ago)   9m5s

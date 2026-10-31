@@ -1,0 +1,57 @@
+@startuml saga-payment-failed
+title Оформление заказа: оплата не прошла
+
+autonumber
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 220
+
+actor "Покупатель" as customer
+participant "Мобильное\nприложение" as app
+participant "Order\nService" as order
+queue "Kafka" as kafka
+participant "Inventory\nService" as inventory
+participant "Payment\nService" as payment
+participant "Платёжный\nшлюз" as psp
+participant "Notification\nService" as notification
+
+== Шаги 1–2 как в успешном сценарии: заказ создан, товары зарезервированы ==
+kafka -> payment : StockReserved
+
+alt списание по привязанной карте
+    payment -> psp : списание по токену карты
+    psp --> payment : отказ банка
+else оплата на платёжной странице
+    payment -> psp : создать платёж (срок жизни 15 минут)
+    psp --> payment : paymentUrl
+    payment -> kafka : PaymentInitiated
+    kafka -> order : PaymentInitiated
+    order -> order : AWAITING_PAYMENT
+    app -> order : GET /orders/{id}
+    order --> app : paymentUrl
+    app -> customer : открывает платёжную страницу
+    alt банк отклонил операцию
+        customer -> psp : вводит данные карты
+        psp -> payment : вебхук: отказ (например, недостаточно средств)
+    else покупатель не оплатил вовремя
+        payment -> payment : срок платежа истёк
+        payment -> psp : отменить платёж
+    end
+end
+
+payment -> kafka : PaymentFailed (причина)
+kafka -> order : PaymentFailed
+order -> order : CANCELLED, причина PAYMENT_FAILED
+order -> kafka : OrderCancelled
+
+kafka -> inventory : OrderCancelled
+inventory -> inventory : снимает резерв
+inventory -> kafka : StockReleased
+kafka -> order : StockReleased
+
+kafka -> payment : OrderCancelled
+payment -> payment : деньги не списаны, возвращать нечего
+
+kafka -> notification : OrderCancelled
+notification -> customer : push: оплата не прошла, заказ отменён
+@enduml

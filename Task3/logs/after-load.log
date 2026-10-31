@@ -1,0 +1,18 @@
+$ date +%T
+13:37:47
+$ kubectl get hpa scaletestapp
+NAME           REFERENCE                 TARGETS           MINPODS   MAXPODS   REPLICAS   AGE
+scaletestapp   Deployment/scaletestapp   memory: 84%/80%   1         10        10         33m
+
+$ kubectl top pods -l app=scaletestapp
+NAME                            CPU(cores)   MEMORY(bytes)   
+scaletestapp-7648c8d994-5nlvs   1m           5Mi             
+scaletestapp-7648c8d994-6567z   1m           17Mi            
+scaletestapp-7648c8d994-cjfn4   1m           8Mi             
+scaletestapp-7648c8d994-cjmsr   1m           9Mi             
+scaletestapp-7648c8d994-lw2vl   1m           7Mi             
+scaletestapp-7648c8d994-mxprt   1m           6Mi             
+scaletestapp-7648c8d994-ptrlp   1m           5Mi             
+scaletestapp-7648c8d994-smqdt   1m           6Mi             
+scaletestapp-7648c8d994-x6gnf   1m           5Mi             
+scaletestapp-7648c8d994-xfg49   1m           11Mi            

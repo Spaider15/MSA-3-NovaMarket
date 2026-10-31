@@ -1,0 +1,73 @@
+@startuml saga-success
+title Оформление заказа: успешный сценарий
+
+autonumber
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 220
+
+actor "Покупатель" as customer
+participant "Мобильное\nприложение" as app
+participant "Order\nService" as order
+participant "Catalog\nService" as catalog
+queue "Kafka" as kafka
+participant "Inventory\nService" as inventory
+participant "Payment\nService" as payment
+participant "Платёжный\nшлюз" as psp
+participant "Delivery\nService" as delivery
+participant "Логистический\nпровайдер" as logistics
+participant "Notification\nService" as notification
+actor "Продавец" as seller
+
+== Шаг 1. Подтверждение состава заказа ==
+customer -> app : проверяет товары и сумму, указывает адрес, способ доставки и оплаты
+app -> order : POST /orders
+order -> catalog : сверка цен
+catalog --> order : актуальные цены
+order -> order : заказ CREATED, OrderCreated в outbox (одна транзакция)
+order --> app : 202 Accepted, orderId
+app --> customer : заказ «Ожидает оплаты»
+order -> kafka : OrderCreated
+
+== Шаг 2. Проверка и резерв товаров ==
+kafka -> inventory : OrderCreated
+inventory -> inventory : резерв всех позиций заказа, TTL 20 минут
+inventory -> kafka : StockReserved
+kafka -> payment : StockReserved
+
+== Шаг 3. Оплата ==
+alt у покупателя привязана карта
+    payment -> psp : списание по токену карты
+    psp --> payment : успешно
+else оплата на платёжной странице
+    payment -> psp : создать платёж (срок жизни 15 минут)
+    psp --> payment : paymentUrl
+    payment -> kafka : PaymentInitiated
+    kafka -> order : PaymentInitiated
+    order -> order : AWAITING_PAYMENT, сохраняет paymentUrl
+    app -> order : GET /orders/{id}
+    order --> app : paymentUrl
+    app -> customer : открывает платёжную страницу
+    customer -> psp : вводит данные карты, при желании привязывает её
+    psp -> payment : вебхук через API Gateway: оплата прошла (+ токен карты)
+end
+payment -> kafka : PaymentSucceeded
+kafka -> order : PaymentSucceeded
+order -> order : PAID, «Оплачен и готовится к отправке»
+order -> kafka : OrderPaid
+
+== Шаг 4. Подготовка заказа к доставке ==
+kafka -> inventory : OrderPaid
+inventory -> inventory : резерв подтверждён, TTL снят
+kafka -> notification : OrderPaid
+notification -> customer : push: заказ оплачен
+kafka -> delivery : OrderPaid
+delivery -> logistics : заявка на доставку: адрес, получатель, товары (через Egress Proxy)
+logistics --> delivery : трек-номер, дата доставки
+delivery -> kafka : ShipmentCreated
+kafka -> order : ShipmentCreated
+order -> order : сохраняет трек-номер и дату доставки
+kafka -> notification : ShipmentCreated
+notification -> seller : новый заказ: подготовить товар к отправке
+notification -> customer : push: трек-номер и дата доставки
+@enduml
